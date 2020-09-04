@@ -92,17 +92,6 @@ void chash_insert(struct chash *hash, void *key, void *val)
 {
     int i = CHASH_KEY_INDEX(hash, key);
     struct __chash_table_entry__ *current_node = hash->table[i].head;
-    // while (current_node != NULL)
-    // {
-    //     /* Check if this key already exists in the list */
-    //     if (CHASH_KEYS_MATCH(hash, current_node->key, key))
-    //     {
-    //         chash_val_modify(hash, current_node->val, val);
-    //         return; /* Nothing left to do */
-    //     }
-
-    //     current_node = current_node->next;
-    // }
 
     if (current_node != NULL)
     {
