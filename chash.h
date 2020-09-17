@@ -3,8 +3,8 @@
  * Will map a key of some type to a value of some type.
  */
 
-#ifndef CHASH
-#define CHASH
+#ifndef CHASH_H
+#define CHASH_H
 #define CHASH_TYPE_STRING ((size_t)0)
 
 #include <string.h>
@@ -56,4 +56,4 @@ void *chash_find(struct chash *hash, void *key);
 /* Function for hashing an object of any type */
 long chash_generic_hash(void *obj, size_t sizeof_obj);
 
-#endif /* CHASH */
+#endif /* CHASH_H */
