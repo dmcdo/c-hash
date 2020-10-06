@@ -3,10 +3,18 @@
 #include <stdbool.h>
 #include "../chash.h"
 
+int cmpfunc(const void *a, const void *b, size_t size)
+{
+    return (*(int *)a - *(int *)b);
+}
+
 int main(int argc, char const *argv[])
 {
     // Create a new hashtable that maps a string key to an integer value
-    struct chash *hashtable = chash_create(CHASH_TYPE_STRING, sizeof(int));
+    struct chash *hashtable = chash_create(CHASH_TYPE_STRING,
+                                           CHASH_STRING_HASH,
+                                           CHASH_STRING_CMP,
+                                           sizeof(int));
 
     int do_loop = true;
     while (do_loop)

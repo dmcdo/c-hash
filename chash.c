@@ -12,18 +12,6 @@
 #define CHASH_KEY_IS_STRING(hash) (hash->sizeof_key == CHASH_TYPE_STRING)
 #define CHASH_VAL_IS_STRING(hash) (hash->sizeof_val == CHASH_TYPE_STRING)
 
-#define CHASH_KEY_CMP(hash, x, y) \
-    (CHASH_KEY_IS_STRING(hash) ? strcmp(x, y) : memcmp(x, y, hash->sizeof_key))
-
-#define CHASH_VAL_CMP(hash, x, y) \
-    (CHASH_VAL_IS_STRING(hash) ? strcmp(x, y) : memcmp(x, y, hash->sizeof_val))
-
-#define CHASH_KEYS_MATCH(hash, x, y) (CHASH_KEY_CMP(hash, x, y) == 0)
-#define CHASH_VALS_MATCH(hash, x, y) (CHASH_VAL_CMP(hash, x, y) == 0)
-
-#define CHASH_KEY_INDEX(hash, key) \
-    (chash_generic_hash(key, CHASH_KEY_IS_STRING(hash) ? strlen(key) : hash->sizeof_key) % hash->table_size)
-
 void chash_val_modify(struct chash *hash, void *dest, void *src)
 {
     if (CHASH_VAL_IS_STRING(hash))
@@ -43,7 +31,11 @@ void chash_val_modify(struct chash *hash, void *dest, void *src)
 *                              *
 *******************************/
 
-struct chash *chash_create(size_t sizeof_key, size_t sizeof_val)
+struct chash *chash_create(
+    size_t sizeof_key,
+    int (*keyhash)(const void *, const size_t),
+    int (*keycmp)(const void *, const void *, const size_t),
+    size_t sizeof_val)
 {
     /* Allocate the memory necessary for an empty hash table */
     struct chash *hash = malloc(sizeof(struct chash));
@@ -52,6 +44,8 @@ struct chash *chash_create(size_t sizeof_key, size_t sizeof_val)
     /* Initialize the hash */
     hash->table_size = DEFAULT_TABLE_SIZE;
     hash->sizeof_key = sizeof_key;
+    hash->keycmp = keycmp;
+    hash->keyhash = keyhash;
     hash->sizeof_val = sizeof_val;
 
     return hash;
@@ -90,7 +84,7 @@ void chash_destroy(struct chash **p_hash)
  */
 void chash_insert(struct chash *hash, void *key, void *val)
 {
-    int i = CHASH_KEY_INDEX(hash, key);
+    int i = hash->keyhash(key, hash->sizeof_key) % hash->table_size;
     struct __chash_table_entry__ *current_node = hash->table[i].head;
 
     if (current_node != NULL)
@@ -98,7 +92,7 @@ void chash_insert(struct chash *hash, void *key, void *val)
         while (current_node->next != NULL)
         {
             /* Check if this key already exists in the list */
-            if (CHASH_KEYS_MATCH(hash, current_node->key, key))
+            if (hash->keycmp(key, current_node->key, hash->sizeof_key) == 0)
             {
                 chash_val_modify(hash, current_node->val, val);
                 return; /* Nothing left to do */
@@ -108,7 +102,7 @@ void chash_insert(struct chash *hash, void *key, void *val)
         }
 
         /* Check if this key already exists in the list */
-        if (CHASH_KEYS_MATCH(hash, current_node->key, key))
+        if (hash->keycmp(key, current_node->key, hash->sizeof_key) == 0)
         {
             chash_val_modify(hash, current_node->val, val);
             return; /* Nothing left to do */
@@ -161,7 +155,7 @@ void chash_insert(struct chash *hash, void *key, void *val)
 
 void chash_remove(struct chash *hash, void *key)
 {
-    int i = CHASH_KEY_INDEX(hash, key);
+    int i = hash->keyhash(key, hash->sizeof_key) % hash->table_size;
 
     /* The middle node will be removed, and the left connected to the right */
     /* [l]->[m]->[r] => delete [m] => [l]->[r] */
@@ -183,7 +177,7 @@ void chash_remove(struct chash *hash, void *key)
     while (middle_node != NULL)
     {
         /* Is this the key we're looking for? */
-        if (CHASH_KEYS_MATCH(hash, middle_node->key, key))
+        if (hash->keycmp(key, middle_node->key, hash->sizeof_key) == 0)
         {
             /* free the middle node */
             free(middle_node->key);
@@ -219,13 +213,13 @@ void chash_remove(struct chash *hash, void *key)
 
 void *chash_find(struct chash *hash, void *key)
 {
-    int i = CHASH_KEY_INDEX(hash, key);
+    int i = hash->keyhash(key, hash->sizeof_key) % hash->table_size;
     struct __chash_table_entry__ *current_node = hash->table[i].head;
 
     /* Traverse the list looking for value associated with the provided key */
     while (current_node != NULL)
     {
-        if (CHASH_KEYS_MATCH(hash, current_node->key, key))
+        if (hash->keycmp(key, current_node->key, hash->sizeof_key) == 0)
         {
             /* Found it! */
             return current_node->val;
@@ -239,15 +233,25 @@ void *chash_find(struct chash *hash, void *key)
 }
 
 /* Based on Python's string hashing algorithm */
-long chash_generic_hash(void *obj, size_t sizeof_obj)
+int _chash_mem_hash(const void *__obj, size_t __type)
 {
-    uint8_t *p = (uint8_t *)obj;
+    uint8_t *p = (uint8_t *)__obj;
     int x = *p << 7;
 
-    for (size_t i = 1; i < sizeof_obj; i++)
+    for (size_t i = 1; i < __type; i++)
     {
         x = (1000003 * x) ^ *(p + i);
     }
 
-    return x ^ sizeof_obj;
+    return x ^ __type;
+}
+
+int _chash_strcmp(const void *__s1, const void *__s2, const size_t __type)
+{
+    return strcmp((const char *)__s1, (const char *)__s2);
+}
+
+int _chash_str_hash(const void *__s, const size_t __size)
+{
+    return _chash_mem_hash(__s, strlen((const char *)__s));
 }
