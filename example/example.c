@@ -1,20 +1,16 @@
 #include <stdio.h>
 #include <ctype.h>
-#include <stdbool.h>
+#include <malloc.h>
 #include "../chash.h"
-
-int cmpfunc(const void *a, const void *b, size_t size)
-{
-    return (*(int *)a - *(int *)b);
-}
 
 int main(int argc, char const *argv[])
 {
     // Create a new hashtable that maps a string key to an integer value
-    struct chash *hashtable = chash_create(CHASH_TYPE_STRING,
-                                           CHASH_STRING_HASH,
-                                           CHASH_STRING_CMP,
-                                           sizeof(int));
+    CHASH *hashtable = chash_create(sizeof(char *),
+                                           sizeof(int),
+                                           chash_strhash,
+                                           chash_strcmp,
+                                           NULL);
 
     int do_loop = true;
     while (do_loop)
@@ -22,7 +18,7 @@ int main(int argc, char const *argv[])
         char choice;
         char key[21];
         int val;
-        int *p_val;
+        CHASH_KEY_VAL_PAIR *kv_pair;
 
         printf("What would you like to do? \n");
         printf("i: insert key-vaue pair, r: remove key-value pair\n");
@@ -40,7 +36,10 @@ int main(int argc, char const *argv[])
             scanf("%d", &val);
             getchar(); // Absorb newline character
 
-            chash_insert(hashtable, key, &val);
+            char *k = (char *)malloc(21);        strcpy(k, key);
+            int *v = (int *)malloc(sizeof(int)); *v = val;
+
+            chash_insert(hashtable, k, v, NULL);
             printf("Key-value pair inserted!\n");
             break;
 
@@ -48,7 +47,11 @@ int main(int argc, char const *argv[])
             printf("Enter key (20 characters max please): ");
             scanf("%s", key);
 
-            chash_remove(hashtable, key);
+            CHASH_KEY_VAL_PAIR *p = chash_remove(hashtable, key, NULL);
+
+            free(p->key);
+            free(p->val);
+
             printf("Key-value pair removed!\n");
             break;
 
@@ -56,15 +59,15 @@ int main(int argc, char const *argv[])
             printf("Enter key (20 characters max please): ");
             scanf("%s", key);
 
-            p_val = (int *)chash_find(hashtable, key);
+            kv_pair = chash_lookup(hashtable, key, NULL);
 
-            if (p_val == NULL)
+            if (kv_pair == NULL)
             {
                 printf("Definition for \"%s\" not found.\n", key);
             }
             else
             {
-                printf("\"%s\" => %d\n", key, *p_val);
+                printf("\"%s\" => %d\n", (char *)kv_pair->key, *((int *)kv_pair->val));
             }
             break;
 
@@ -80,7 +83,7 @@ int main(int argc, char const *argv[])
     }
 
     // We're done using the hashtable, so we must delete it
-    chash_destroy(&hashtable);
+    chash_delete(hashtable, true, true);
 
     puts("Goodbye!");
     return 0;
