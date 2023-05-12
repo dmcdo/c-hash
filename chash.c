@@ -1,10 +1,8 @@
 #include "chash.h"
 #include <stdlib.h>
 
-#define CHASH_DEFAULT_POW (5)
-#define CHASH_MAX_DEPTH (3)
-#define CHASH_TRUE (1)
-#define CHASH_FALSE (0)
+#define _CHASH_DEFAULT_SIZE (32)
+#define _CHASH_MAX_DEPTH (2)
 
 typedef struct _CHASH_NODE CHASH_NODE;
 
@@ -46,6 +44,49 @@ void _chash_set_error(int *p, int error)
         *p = error;
 }
 
+void _chash_resize(CHASH *hash, size_t size, int *error)
+{
+    CHASH_NODE **array = (CHASH_NODE **)calloc(size, sizeof(CHASH_NODE *));
+
+    if (array == NULL)
+    {
+        _chash_set_error(error, CHASH_MEMORY_ALLOC_ERROR);
+        return;
+    }
+
+    for (int i = 0; i < hash->_size; i++)
+    {
+        CHASH_NODE *node;
+        CHASH_NODE *next;
+        for (node = hash->_array[i]; node != NULL;)
+        {
+            next = node->_next;
+
+            size_t j = hash->_hash_key(node->_pair.key) % size;
+            if (array[j] == NULL)
+            {
+                array[j] = node;
+                array[j]->_next = NULL;
+            }
+            else
+            {
+                CHASH_NODE *parent;
+                for (parent = array[j]; parent->_next != NULL; parent = parent->_next)
+                    ;
+
+                parent->_next = node;
+                node->_next = NULL;
+            }
+
+            node = next;
+        }
+    }
+
+    free(hash->_array);
+    hash->_array = array;
+    hash->_size = size;
+}
+
 CHASH *chash_create(
     size_t sizeof_key,
     size_t sizeof_val,
@@ -54,7 +95,7 @@ CHASH *chash_create(
     int *error)
 {
     CHASH *hash = (CHASH *)malloc(sizeof(CHASH));
-    size_t size = 1 << CHASH_DEFAULT_POW;
+    size_t size = _CHASH_DEFAULT_SIZE;
 
     if (hash == NULL)
     {
@@ -72,7 +113,6 @@ CHASH *chash_create(
     }
 
     hash->_size = size;
-    hash->_deepest_depth = 0;
     hash->_sizeof_key = sizeof_key;
     hash->_sizeof_val = sizeof_val;
     hash->_hash_key = hash_key_function;
@@ -149,7 +189,10 @@ CHASH_KEY_VAL_PAIR *chash_insert(CHASH *hash, void *key, void *val, int *error)
         parent->_next = node;
 
 
-    // TODO max depth check
+    if (depth >= _CHASH_MAX_DEPTH)
+    {
+        _chash_resize(hash, hash->_size << 1, NULL);
+    }
 
     _chash_set_error(error, CHASH_NO_ERROR);
     return NULL;

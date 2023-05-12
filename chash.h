@@ -26,7 +26,6 @@ struct _CHASH
 {
     struct _CHASH_NODE **_array;
     size_t _size;
-    size_t _deepest_depth;
     size_t _sizeof_key;
     size_t _sizeof_val;
     size_t (*_hash_key)(const void *);
