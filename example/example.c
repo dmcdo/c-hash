@@ -82,9 +82,19 @@ int main(int argc, char const *argv[])
         putchar('\n');
     }
 
+
+    // Print all values in hashtable
+    puts("");
+    puts("Values left in hash");
+    puts("-------------------");
+    for (CHASH_ITERATOR i = chash_iterate_begin(hashtable); !i.end; chash_iterate_next(&i))
+    {
+        printf("\"%s\" => %d\n", (char *)i.key, *(int *)i.val);
+    }
+
     // We're done using the hashtable, so we must delete it
     chash_delete(hashtable, true, true);
 
-    puts("Goodbye!");
+    puts("\nGoodbye!");
     return 0;
 }

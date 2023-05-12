@@ -202,3 +202,56 @@ CHASH_KEY_VAL_PAIR *chash_remove(CHASH *hash, void *key, int *error)
     return NULL;
 }
 
+
+/* 
+ * Iterator Functions
+ */
+
+CHASH_ITERATOR chash_iterate_begin(CHASH *hash)
+{
+    CHASH_ITERATOR iter;
+    iter._hash = hash;
+    iter.end = false;
+    iter.key = NULL;
+    iter.val = NULL;
+    iter._i = 0;
+    iter._p = hash->_array[0];
+
+    chash_iterate_next(&iter);
+
+    return iter;
+}
+
+void chash_iterate_next(CHASH_ITERATOR *iter)
+{
+    if (iter->end)
+    {
+        return;
+    }
+
+    if (iter->_p != NULL)
+    {
+        iter->key = iter->_p->_pair.key;
+        iter->val = iter->_p->_pair.val;
+        iter->_p = iter->_p->_next;
+        return;
+    }
+
+    for (int i = iter->_i + 1; i < iter->_hash->_size; i++)
+    {
+        if (iter->_hash->_array[i] != NULL)
+        {
+            iter->key = iter->_hash->_array[i]->_pair.key;
+            iter->val = iter->_hash->_array[i]->_pair.val;
+            iter->_i = i;
+            iter->_p = iter->_hash->_array[i]->_next;
+            return;
+        }
+    }
+
+    iter->end = true;
+    iter->key = NULL;
+    iter->val = NULL;
+    iter->_i = 0;
+    iter->_p = NULL;
+}

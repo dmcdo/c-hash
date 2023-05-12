@@ -35,10 +35,12 @@ struct _CHASH
 
 struct _CHASH_ITERATOR
 {
+    bool end;
     void *key;
     void *val;
+    struct _CHASH *_hash;
     size_t _i;
-    size_t _d;
+    struct _CHASH_NODE *_p;
 };
 
 typedef struct _CHASH CHASH;
@@ -62,8 +64,7 @@ CHASH_KEY_VAL_PAIR *chash_lookup(CHASH *hash, void *key, int *error);
 CHASH_KEY_VAL_PAIR *chash_remove(CHASH *hash, void *key, int *error);
 
 
-CHASH_KEY_VAL_PAIR chash_iterate_begin(CHASH *hash);
-CHASH_KEY_VAL_PAIR chash_iterate_next(CHASH *hash);
-CHASH_KEY_VAL_PAIR chash_iterate_break(CHASH *hash);
+CHASH_ITERATOR chash_iterate_begin(CHASH *hash);
+void chash_iterate_next(CHASH_ITERATOR *iter);
 
 #endif /* CHASH_H */
