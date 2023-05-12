@@ -6,28 +6,10 @@
 
 typedef struct _CHASH_NODE CHASH_NODE;
 
-int chash_strcmp(const void *s1, const void *s2)
-{
-    return strcmp((const char *)s1, (const char *)s2);
-}
 
-size_t chash_strhash(const void *s)
-{
-    if (s == NULL)
-        return 0;
-
-    size_t i = 0;
-    size_t x = 1000003;
-
-    for (const char *p = (const char *)s; *p; p++, i++)
-    {
-        x = (1000003 * x) ^ *p;
-    }
-
-    return x ^ i;
-}
-
-
+/*
+ * Internal functions
+ */
 CHASH_KEY_VAL_PAIR *_chash_kvp_static_pointer(CHASH_KEY_VAL_PAIR *p_set_val)
 {
     static CHASH_KEY_VAL_PAIR x;
@@ -87,6 +69,10 @@ void _chash_resize(CHASH *hash, size_t size, int *error)
     hash->_size = size;
 }
 
+
+/*
+ * Funtion definitions
+ */
 CHASH *chash_create(
     size_t sizeof_key,
     size_t sizeof_val,
@@ -297,4 +283,59 @@ void chash_iterate_next(CHASH_ITERATOR *iter)
     iter->val = NULL;
     iter->_i = 0;
     iter->_p = NULL;
+}
+
+
+/*
+ * Provided comparison and hashing functions.
+ */
+int chash_strcmp(const void *s1, const void *s2)
+{
+    return strcmp((const char *)s1, (const char *)s2);
+}
+
+int chash_ptrcmp(const void *p1, const void *p2)
+{
+    return p1 - p2;
+}
+
+int chash_intcmp(const void *x, const void *y)
+{
+    return *(int *)x - *(int *)y;
+}
+
+int chash_longcmp(const void *x, const void *y)
+{
+    return *(long *)x - *(long *)y;
+}
+
+size_t chash_strhash(const void *s)
+{
+    if (s == NULL)
+        return 0;
+
+    size_t i = 0;
+    size_t x = 1000003;
+
+    for (const char *p = (const char *)s; *p; p++, i++)
+    {
+        x = (1000003 * x) ^ *p;
+    }
+
+    return x ^ i;
+}
+
+size_t chash_ptrhash(const void *p)
+{
+    return (size_t)p;
+}
+
+size_t chash_inthash(const void *x)
+{
+    return *(int *)x;
+}
+
+size_t chash_longhash(const void *x)
+{
+    return *(long *)x;
 }
